@@ -22,3 +22,5 @@ def mean_iou(y_true, y_pred):
     union = tf.reduce_sum(y_true, axis=[1, 2, 3]) + tf.reduce_sum(y_pred, axis=[1, 2, 3])
     smooth = tf.ones(tf.shape(intersect))
     return tf.reduce_mean((intersect + smooth) / (union - intersect + smooth))
+
+
