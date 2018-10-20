@@ -125,54 +125,6 @@ def precision(tp, fp, fn):
 # # debug code for above function
 # print(precision(3,1,1))
 
-def average_precision_image(predicted_boxes, confidences, target_boxes, shape=256,
-                            thresholds=np.arange(0.4, 0.8, 0.05)):
-    """expects [x1, y1, w1, h1]
-    :param predicted_boxes: [[x1, y1, w1, h1], [x2, y2, w2, h2], ...] list of predicted boxes
-    coordinates
-    :param confidences: [c1, c2, ...] list of confidence values for the predicted boxes
-    :param target_boxes: [[x1, y1, w1, h1], [x2, y2, w2, h2], ...] list of target boxes coordinates
-    :param shape: shape of the boolean masks (default set to maximum possible value,
-    set to smaller to save memory)
-    :returns: average_precision
-    """
-    # if both predicted and target boxes are empty, precision is NaN (and doesn't count towards
-    # the average)
-    if (len(predicted_boxes) + len(target_boxes)) == 0:
-        return np.nan
-    elif len(predicted_boxes) == 0:
-        return 0.0
-        # if we have target boxes but no predicted boxes, precision is 0
-    elif len(target_boxes) == 0:
-        return 0.0
-    # if we have both predicted and target boxes, proceed to calculate image average precision
-    else:
-        # define list of thresholds for IoU [0.4 , 0.45, 0.5 , 0.55, 0.6 , 0.65, 0.7 , 0.75]
-        # sort boxes according to their confidence (from largest to smallest)
-        predicted_boxes_sorted = [b for _, b in sorted(zip(confidences, predicted_boxes),key=lambda pair: -pair[0])]
-        average_precision = 0.0
-        for t in thresholds:  # iterate over thresholds
-            # with a first loop we measure true and false positives
-            tp = 0  # initiate number of true positives
-            fp = len(predicted_boxes)  # initiate number of false positives
-            fn = len(target_boxes)  # initiate number of false negatives
-            fn_mask = np.ones_like(target_boxes)
-            for box_p in predicted_boxes_sorted:  # iterate over predicted boxes coordinates
-                box_p_msk = box_mask_coords(box_p, shape)  # generate boolean mask
-                for i, box_t in enumerate(target_boxes):  # iterate over ground truth boxes coordinates
-                    box_t_msk = box_mask_coords(box_t, shape)  # generate boolean mask
-                    iou = IoU(box_p_msk, box_t_msk)  # calculate IoU
-                    if iou > t:
-                        tp += 1  # if IoU is above the threshold, we got one more true positive
-                        fp -= 1  # and one less false positive
-                        fn_mask[i] = 0
-                        break  # proceed to the next predicted box
-
-
-            average_precision += precision(tp, fp, fn) / float(len(thresholds))
-        assert 0 <= average_precision <=1
-        return average_precision
-
 
 def average_precision_image(predicted_boxes, confidences, target_boxes, shape=256,
                             thresholds=np.arange(0.4, 0.8, 0.05)):
