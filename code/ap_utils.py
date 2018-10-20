@@ -149,26 +149,26 @@ def average_precision_image(predicted_boxes, confidences, target_boxes, shape=25
         return 0.0
     # if we have both predicted and target boxes, proceed to calculate image average precision
     else:
-        # define list of thresholds for IoU [0.4 , 0.45, 0.5 , 0.55, 0.6 , 0.65, 0.7 , 0.75]
         # sort boxes according to their confidence (from largest to smallest)
-        predicted_boxes_sorted = [b for _, b in sorted(zip(confidences, predicted_boxes),key=lambda pair: -pair[0])]
+        predicted_boxes_sorted = [b for _, b in sorted(zip(confidences, predicted_boxes),
+                                                       key=lambda pair: -pair[0])]
+        pred_masks = [box_mask_coords(box, shape) for box in predicted_boxes_sorted]
+        targ_masks = [box_mask_coords(box, shape) for box in target_boxes]
         average_precision = 0.0
         for t in thresholds:  # iterate over thresholds
-            prec = calc_precision_at_thresh(predicted_boxes_sorted, shape, t, target_boxes)
+            prec = calc_precision_at_thresh(pred_masks, targ_masks, t)
             average_precision += prec / float(len(thresholds))
             assert 0 <= average_precision <= 1
         return average_precision
 
 
-def calc_precision_at_thresh(predicted_boxes_sorted, shape, t, target_boxes):
+def calc_precision_at_thresh(predicted_boxes_sorted, target_boxes, t):
     n_targ_boxes = len(target_boxes)
     tp = 0  # initiate number of true positives
     fp = len(predicted_boxes_sorted)  # initiate number of false positives
-    for box_p in predicted_boxes_sorted:  # iterate over predicted boxes coordinates
-        box_p_msk = box_mask_coords(box_p, shape)  # generate boolean mask
-        for i, box_t in enumerate(target_boxes):  # iterate over ground truth boxes coordinates
-            box_t_msk = box_mask_coords(box_t, shape)  # generate boolean mask
-            iou = IoU(box_p_msk, box_t_msk)  # calculate IoU
+    for box_p_msk in predicted_boxes_sorted:  # iterate over predicted boxes coordinates
+        for box_t_msk in target_boxes:  # iterate over ground truth boxes coordinates
+            iou = IoU(box_p_msk, box_t_msk)  # calculate IoU. Could hoist to save time.
             if iou > t:
                 tp += 1  # if IoU is above the threshold, we got one more true positive
                 fp -= 1  # and one less false positive
