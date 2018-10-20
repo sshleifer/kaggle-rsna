@@ -4,9 +4,9 @@ import skimage
 
 min_box_area = 10000
 
-# define function that creates a square mask for a box from its coordinates
-def box_mask(box, shape=1024):
-    """
+
+def box_mask(box, shape):
+    """ Create a square mask for a box from its coordinates
     :param box: [x, y, w, h] box coordinates
     :param shape: shape of the image (default set to maximum possible value, set to smaller to
     save memory)
@@ -17,6 +17,18 @@ def box_mask(box, shape=1024):
     mask[y:y + h, x:x + w] = True
     return mask
 
+
+def box_mask_coords(box, shape):
+    """ Create a square mask for a box from its coordinates
+    :param box: [x, y, x2, y2] box coordinates
+    :param shape: shape of the image (default set to maximum possible value, set to smaller to
+    save memory)
+    :returns: (np.array of bool) mask as binary 2D array
+    """
+    x, y, x2, y2 = box
+    mask = np.zeros((shape, shape), dtype=bool)
+    mask[y:y2, x:x2] = True
+    return mask
 
 # # debug code for above function
 # plt.imshow(box_mask([5,20,50,100], shape=256), cmap=mpl.cm.jet)
@@ -113,9 +125,9 @@ def precision(tp, fp, fn):
 # # debug code for above function
 # print(precision(3,1,1))
 
-def average_precision_image(predicted_boxes, confidences, target_boxes, shape=1024,
-                            thresholds=np.arange(0.4, 0.75, 0.05)):
-    """
+def average_precision_image(predicted_boxes, confidences, target_boxes, shape=256,
+                            thresholds=np.arange(0.4, 0.8, 0.05)):
+    """expects [x1, y1, w1, h1]
     :param predicted_boxes: [[x1, y1, w1, h1], [x2, y2, w2, h2], ...] list of predicted boxes
     coordinates
     :param confidences: [c1, c2, ...] list of confidence values for the predicted boxes
@@ -124,9 +136,8 @@ def average_precision_image(predicted_boxes, confidences, target_boxes, shape=10
     set to smaller to save memory)
     :returns: average_precision
     """
-
     # if both predicted and target boxes are empty, precision is NaN (and doesn't count towards
-    # the batch average)
+    # the average)
     if (len(predicted_boxes) + len(target_boxes)) == 0:
         return np.nan
     elif len(predicted_boxes) == 0:
@@ -134,85 +145,108 @@ def average_precision_image(predicted_boxes, confidences, target_boxes, shape=10
         # if we have target boxes but no predicted boxes, precision is 0
     elif len(target_boxes) == 0:
         return 0.0
-
-        # if we have both predicted and target boxes, proceed to calculate image average precision
+    # if we have both predicted and target boxes, proceed to calculate image average precision
     else:
         # define list of thresholds for IoU [0.4 , 0.45, 0.5 , 0.55, 0.6 , 0.65, 0.7 , 0.75]
         # sort boxes according to their confidence (from largest to smallest)
-        predicted_boxes_sorted = list(
-            reversed([b for _, b in sorted(zip(confidences, predicted_boxes),
-                                           key=lambda pair: pair[0])]))
+        predicted_boxes_sorted = [b for _, b in sorted(zip(confidences, predicted_boxes),key=lambda pair: -pair[0])]
         average_precision = 0.0
         for t in thresholds:  # iterate over thresholds
             # with a first loop we measure true and false positives
             tp = 0  # initiate number of true positives
             fp = len(predicted_boxes)  # initiate number of false positives
+            fn = len(target_boxes)  # initiate number of false negatives
+            fn_mask = np.ones_like(target_boxes)
             for box_p in predicted_boxes_sorted:  # iterate over predicted boxes coordinates
-                box_p_msk = box_mask(box_p, shape)  # generate boolean mask
-                for box_t in target_boxes:  # iterate over ground truth boxes coordinates
-                    box_t_msk = box_mask(box_t, shape)  # generate boolean mask
+                box_p_msk = box_mask_coords(box_p, shape)  # generate boolean mask
+                for i, box_t in enumerate(target_boxes):  # iterate over ground truth boxes coordinates
+                    box_t_msk = box_mask_coords(box_t, shape)  # generate boolean mask
                     iou = IoU(box_p_msk, box_t_msk)  # calculate IoU
                     if iou > t:
                         tp += 1  # if IoU is above the threshold, we got one more true positive
                         fp -= 1  # and one less false positive
+                        fn_mask[i] = 0
                         break  # proceed to the next predicted box
-            # with a second loop we measure false negatives
-            fn = len(target_boxes)  # initiate number of false negatives
-            for box_t in target_boxes:  # iterate over ground truth boxes coordinates
-                box_t_msk = box_mask(box_t, shape)  # generate boolean mask
-                for box_p in predicted_boxes_sorted:  # iterate over predicted boxes coordinates
-                    box_p_msk = box_mask(box_p, shape)  # generate boolean mask
-                    iou = IoU(box_p_msk, box_t_msk)  # calculate IoU
-                    if iou > t:
-                        fn -= 1
-                        break  # proceed to the next ground truth box
-            # TBD: this algo must be checked against the official Kaggle evaluation method
-            # which is still not clear...
+
+
             average_precision += precision(tp, fp, fn) / float(len(thresholds))
+        assert 0 <= average_precision <=1
         return average_precision
 
 
-# # debug code for above function
-# confidences = [0.3, 0.9]
-# predicted_boxes = [[20,20,60,70], [110,110,50,70]]
-# target_boxes = [[25,25,60,70], [100,100,50,70]]#, [200, 200, 30, 50]]
-# for box_p in predicted_boxes:
-#     plt.imshow(box_mask(box_p, shape=256), cmap=mpl.cm.Reds, alpha=0.3)
-# for box_t in target_boxes:
-#     plt.imshow(box_mask(box_t, shape=256), cmap=mpl.cm.Greens, alpha=0.3)
-# print(average_precision_image(predicted_boxes, confidences, target_boxes))
-
-# define function that calculates the average precision of a batch of images
-def average_precision_batch(output_batch, pIds, pId_boxes_dict, rescale_factor, shape=1024,
-                            return_array=False):
-    """
-    :param output_batch: cnn model output batch
-    :param pIds: (list) list of patient IDs contained in the output batch
-    :param rescale_factor: CNN image rescale factor
+def average_precision_image(predicted_boxes, confidences, target_boxes, shape=256,
+                            thresholds=np.arange(0.4, 0.8, 0.05)):
+    """expects [x1, y1, w1, h1]
+    :param predicted_boxes: [[x1, y1, w1, h1], [x2, y2, w2, h2], ...] list of predicted boxes
+    coordinates
+    :param confidences: [c1, c2, ...] list of confidence values for the predicted boxes
+    :param target_boxes: [[x1, y1, w1, h1], [x2, y2, w2, h2], ...] list of target boxes coordinates
     :param shape: shape of the boolean masks (default set to maximum possible value,
     set to smaller to save memory)
     :returns: average_precision
     """
+    # if both predicted and target boxes are empty, precision is NaN (and doesn't count towards
+    # the average)
 
-    batch_precisions = []
-    for msk, pId in zip(output_batch,
-                        pIds):  # iterate over batch prediction masks and relative patient IDs
-        # retrieve target boxes from dictionary (quicker than from mask itself)
-        target_boxes = pId_boxes_dict[pId] if pId in pId_boxes_dict else []
-        # rescale coordinates of target boxes
-        if len(target_boxes) > 0:
-            target_boxes = [[int(round(c / float(rescale_factor))) for c in box_t] for box_t in
-                            target_boxes]
-        # extract prediction boxes and confidences
-        predicted_boxes, confidences = torch_mask_to_boxes(msk)
-        batch_precisions.append(
-            average_precision_image(predicted_boxes, confidences, target_boxes, shape=shape))
-    if return_array:
-        return np.asarray(batch_precisions)
+    if (len(predicted_boxes) + len(target_boxes)) == 0:
+        return np.nan
+    elif len(predicted_boxes) == 0:
+        return 0.0
+        # if we have target boxes but no predicted boxes, precision is 0
+    elif len(target_boxes) == 0:
+        return 0.0
+    # if we have both predicted and target boxes, proceed to calculate image average precision
     else:
-        return np.nanmean(np.asarray(batch_precisions))
+        # define list of thresholds for IoU [0.4 , 0.45, 0.5 , 0.55, 0.6 , 0.65, 0.7 , 0.75]
+        # sort boxes according to their confidence (from largest to smallest)
+        predicted_boxes_sorted = [b for _, b in sorted(zip(confidences, predicted_boxes),key=lambda pair: -pair[0])]
+        average_precision = 0.0
+        for t in thresholds:  # iterate over thresholds
+            prec = calc_precision_at_thresh(predicted_boxes_sorted, shape, t, target_boxes)
+            average_precision += prec / float(len(thresholds))
+            #print(' '.join('{:.2f}'.format(x) for x in (t, tp, fp, fn, precision(tp, fp, fn))))
+            assert 0 <= average_precision <= 1
+        return average_precision
+
+
+def calc_precision_at_thresh(predicted_boxes_sorted, shape, t, target_boxes):
+    n_targ_boxes = len(target_boxes)
+    tp = 0  # initiate number of true positives
+    fp = len(predicted_boxes_sorted)  # initiate number of false positives
+    for box_p in predicted_boxes_sorted:  # iterate over predicted boxes coordinates
+        box_p_msk = box_mask_coords(box_p, shape)  # generate boolean mask
+        for i, box_t in enumerate(target_boxes):  # iterate over ground truth boxes coordinates
+            box_t_msk = box_mask_coords(box_t, shape)  # generate boolean mask
+            iou = IoU(box_p_msk, box_t_msk)  # calculate IoU
+            if iou > t:
+                tp += 1  # if IoU is above the threshold, we got one more true positive
+                fp -= 1  # and one less false positive
+                break  # proceed to the next predicted box
+    fn = n_targ_boxes - tp
+    prec = precision(tp, fp, fn)
+    return prec
+
+
+def test_average_precision_image(plotting=False):
+    confidences = [0.3, 0.9]
+    predicted_boxes = [[20, 20, 80, 90], [110, 110, 160, 180]]
+    target_boxes = [[25, 25, 85, 95], [100, 100, 150, 170], [200, 200, 230, 250]]
+    val = round(average_precision_image(predicted_boxes, confidences, target_boxes), 3)
+    assert  val == .375, val
+    if plotting:
+        import matplotlib as mpl
+        import matplotlib.pyplot as plt
+        for box_p in predicted_boxes:
+            plt.imshow(box_mask_coords(box_p, shape=256), cmap=mpl.cm.Reds, alpha=0.3)
+        for box_t in target_boxes:
+            plt.imshow(box_mask_coords(box_t, shape=256), cmap=mpl.cm.Greens, alpha=0.3)
+
 
 from mrcnn import utils
+from tqdm import tqdm_notebook
+import mrcnn.model as modellib
+
+
 def in_bounds_or_empty(r, shape):
     if r.shape[0] == 0:
         return True
@@ -220,8 +254,9 @@ def in_bounds_or_empty(r, shape):
         return r.max() <= shape and r.min() >= 0
 
 def compute_aps(detections, dataset, config, shape=256, thresh=0.95):
+    """Built in mask-rcnn utils assume there is a class in every image."""
     import warnings
-    warnings.filterwarnings('ignore')
+    warnings.filterwarnings('ignore')   # elementwise compare failed everytime run average_precision image
     APs = []
     n_rois = []
     image_ids = []
@@ -244,6 +279,18 @@ def compute_aps(detections, dataset, config, shape=256, thresh=0.95):
     print("mean n rois {:.2f} ".format(np.mean(n_rois)))
     return pd.DataFrame({'ap': APs, 'n_roi': n_rois, 'n_bbox': n_bbox}, index=image_ids)
 
+
+def run_inference_val(model, dataset, config, image_ids=None):
+    detections = []
+    for image_id in tqdm_notebook(image_ids):
+        image, image_meta, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(
+            dataset, config, image_id,
+        )
+        results = model.detect([image], verbose=0)
+        r = results[0]
+        r.pop('masks')  # makes inspection annoying cause adds 256 x 256 foreach
+        detections.append(r)
+    return detections
 
 #res = {.5: .1417, .75: .1407, .85: .1365}
 def thresh_map_check(model, dataset_val, inference_config, n=6, start=.5, end=.99):
