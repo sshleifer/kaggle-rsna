@@ -156,7 +156,6 @@ def average_precision_image(predicted_boxes, confidences, target_boxes, shape=25
         for t in thresholds:  # iterate over thresholds
             prec = calc_precision_at_thresh(predicted_boxes_sorted, shape, t, target_boxes)
             average_precision += prec / float(len(thresholds))
-            #print(' '.join('{:.2f}'.format(x) for x in (t, tp, fp, fn, precision(tp, fp, fn))))
             assert 0 <= average_precision <= 1
         return average_precision
 
@@ -179,24 +178,8 @@ def calc_precision_at_thresh(predicted_boxes_sorted, shape, t, target_boxes):
     return prec
 
 
-def test_average_precision_image(plotting=False):
-    confidences = [0.3, 0.9]
-    predicted_boxes = [[20, 20, 80, 90], [110, 110, 160, 180]]
-    target_boxes = [[25, 25, 85, 95], [100, 100, 150, 170], [200, 200, 230, 250]]
-    val = round(average_precision_image(predicted_boxes, confidences, target_boxes), 3)
-    assert  val == .375, val
-    if plotting:
-        import matplotlib as mpl
-        import matplotlib.pyplot as plt
-        for box_p in predicted_boxes:
-            plt.imshow(box_mask_coords(box_p, shape=256), cmap=mpl.cm.Reds, alpha=0.3)
-        for box_t in target_boxes:
-            plt.imshow(box_mask_coords(box_t, shape=256), cmap=mpl.cm.Greens, alpha=0.3)
-
-
-from mrcnn import utils
 from tqdm import tqdm_notebook
-import mrcnn.model as modellib
+
 
 
 def in_bounds_or_empty(r, shape):
@@ -208,6 +191,7 @@ def in_bounds_or_empty(r, shape):
 def compute_aps(detections, dataset, config, shape=256, thresh=0.95):
     """Built in mask-rcnn utils assume there is a class in every image."""
     import warnings
+    import mrcnn.model as modellib
     warnings.filterwarnings('ignore')   # elementwise compare failed everytime run average_precision image
     APs = []
     n_rois = []
@@ -255,10 +239,10 @@ def thresh_map_check(model, dataset_val, inference_config, n=6, start=.5, end=.9
                                        thresh=thresh, just_stats=True)
     return res
 
-import pandas as pd
+
 def aps_to_mean_ser(res):
     return pd.Series({k: np.mean(v) if isinstance(v, list) else v for k,v in res.items()})
-
+import pandas as pd
 from collections import defaultdict
 
 HISTORY = defaultdict(list)
