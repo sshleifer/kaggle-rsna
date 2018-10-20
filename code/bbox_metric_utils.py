@@ -260,6 +260,10 @@ import pandas as pd
 def aps_to_mean_ser(res):
     return pd.Series({k: np.mean(v) if isinstance(v, list) else v for k,v in res.items()})
 
+from collections import defaultdict
+
+HISTORY = defaultdict(list)
+
 def update_history(model):
     for k,v in model.keras_model.history.history.items():
         HISTORY[k] += v
