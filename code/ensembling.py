@@ -1,5 +1,5 @@
 import numpy as np
-
+from tqdm import tqdm_notebook
 
 
 import pickle
@@ -109,57 +109,3 @@ def run_nms(catted, nms_tresh=0.7):
         else:
             new_boxes[k] = np.nan
     return new_boxes
-
-
-def ensemble_to_pred_lst(vr101, imageid):
-    boxes_list = []
-    scores_list = []
-    labels_list = []
-    for k, v in vr101.items():
-        detections = v[imageid][-1]
-        boxes, scores, labels = (
-            detections['rois'], detections['scores'], detections['class_ids'])
-        boxes_list.append([boxes, ])  # add flipped detections later
-        scores_list.append([scores, ])
-        labels_list.append([labels, ])
-    return boxes_list, scores_list, labels_list
-
-def ensemble_detections(vr101: dict, imageid, skip_box_thr=0.5, intersection_thr=0.5, limit_boxes=300,
-                        ensemble_type='avg'):
-
-    #print('Scores', scores_list)
-    #
-    boxes_list, scores_list, labels_list = ensemble_to_pred_lst(vr101, imageid)
-    filtered_boxes = filter_boxes_v2(boxes_list, scores_list, labels_list, skip_box_thr)
-    dets = merge_all_boxes_for_image(filtered_boxes, intersection_thr, ensemble_type)
-    try:
-        return dict(rois=dets[:,2:], scores=dets[:,1])
-    except IndexError:
-        assert dets.shape[0] == 0
-        return dict(rois=np.array([]), scores=np.array([]))
-
-
-def compute_aps(detections, dataset, config, shape=256, thresh=0.95):
-    import warnings
-    warnings.filterwarnings('ignore')
-    APs = []
-    n_rois = []
-    image_ids = []
-    n_bbox=[]
-    for image_id in tqdm_notebook(detections.keys()):
-        image_ids.append(image_id)
-        # Load image
-        image, image_meta, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(
-            dataset, config, image_id,
-            use_mini_mask=False
-        )
-        r = detections[image_id]
-        rois = r['rois'][np.where(r['scores'] > thresh)].astype(int)
-        APs.append(
-            average_precision_image(rois, r['scores'], gt_bbox, shape=shape)
-        )
-        n_rois.append(rois.shape[0])
-        n_bbox.append(gt_bbox.shape[0])
-    print("mAP {:.4f} ".format(np.nanmean(APs)))
-    print("mean n rois {:.2f} ".format(np.mean(n_rois)))
-    return pd.DataFrame({'ap': APs, 'n_roi':n_rois, 'n_bbox': n_bbox}, index=image_ids)

@@ -356,18 +356,14 @@ def in_bounds_or_empty(r, shape):
         return r.max() <= shape and r.min() >=0
 
 def compute_batch_ap(model, dataset, config, image_ids,
-                     shape=256, thresh=0.95, do_trick=True):
+                     shape=256, min_conf=0.95, do_trick=True):
     APs = []
-
     for image_id in tqdm_notebook(image_ids):
         # Load image
         image, image_meta, gt_class_id, gt_bbox, gt_mask = modellib.load_image_gt(
             dataset, config, image_id,
             #    use_mini_mask=False
         )
-
-        # print(image_meta, gt_bbox, gt_mask)
-        # Run object detection
         if image_id not in preds_cache:
             results = model.detect([image], verbose=0)
             r = results[0]
@@ -383,7 +379,7 @@ def compute_batch_ap(model, dataset, config, image_ids,
             ratio = get_yhat(image_id)
         else:
             r['scores2'] = r['scores']
-        rois = r['rois'][np.where(r['scores2'] > thresh)]
+        rois = r['rois'][np.where(r['scores2'] > min_conf)]
         APs.append(
             average_precision_image(rois, r['scores2'], gt_bbox, shape=shape)
         )
@@ -404,6 +400,7 @@ def train_from_ckpt(dataset_train, dataset_val, coco_weight_path=coco_weight_pat
                 epochs=32,
                 layers='all',
                 augmentation=augmentation)
+    return model
 
 
 def oof_from_coco_script(weight_paths=None, N_SPLITS = 4):

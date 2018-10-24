@@ -162,19 +162,41 @@ def merge_all_boxes_for_image(boxes, intersection_thr=0.55, type='avg'):
     return np.array(new_boxes)
 
 
-def ensemble_detections(vr101: dict, imageid, skip_box_thr=0.05, intersection_thr=0.5, limit_boxes=300,
-                        ensemble_type='avg'):
+def ensemble_to_pred_lst(vr101, imageid, do_flip=False):
     boxes_list = []
     scores_list = []
     labels_list = []
     for k, v in vr101.items():
-        detections = v[imageid][-1]
+        if isinstance(v[imageid], tuple):
+            detections = v[imageid][-1]
+        else:
+            detections = v[imageid]
         boxes, scores, labels = (
-            detections['rois'], detections['scores'], detections['class_ids'])
-        boxes_list.append([boxes, ])  # add flipped detections later
-        scores_list.append([scores, ])
-        labels_list.append([labels, ])
-    print(boxes_list)
+            detections['rois'], detections['scores'], detections['class_ids']
+        )
+        if do_flip:
+            # Untested attempt at test-time flipping
+            boxes_list.append([boxes, boxes])  # add flipped detections later
+            scores_list.append([scores, scores])
+            labels_list.append([labels, labels])
+        else:
+            boxes_list.append([boxes, ])
+            scores_list.append([scores, ])
+            labels_list.append([labels, ])
+    return boxes_list, scores_list, labels_list
+
+
+def _ensemble_detections(vr101: dict, imageid, skip_box_thr=0.5, intersection_thr=0.5,
+                         ensemble_type='avg'):
+    boxes_list, scores_list, labels_list = ensemble_to_pred_lst(vr101, imageid)
     filtered_boxes = filter_boxes_v2(boxes_list, scores_list, labels_list, skip_box_thr)
-    merged_boxes = merge_all_boxes_for_image(filtered_boxes, intersection_thr, ensemble_type)
-    return merged_boxes
+    dets = merge_all_boxes_for_image(filtered_boxes, intersection_thr, ensemble_type)
+    try:
+        return dict(rois=dets[:,2:], scores=dets[:,1])
+    except IndexError:
+        assert dets.shape[0] == 0
+        return dict(rois=np.array([]), scores=np.array([]))
+
+def ensemble_detections(vr101, image_ids, **kwargs):
+    return {id: _ensemble_detections(vr101, id, **kwargs) for id in image_ids}
+
