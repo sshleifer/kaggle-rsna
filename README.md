@@ -6,7 +6,7 @@ train mask-rcnn
 train keras-retinanet on 256x256
 train keras-retinanet on 300x300
 no NIH data
-inference: 
+inference: `retinanet_inference.py` 
     use nms_threshold=0.01 (combine boxes if there is any overlap)
     use score_threshold=.15 for retinanet, .95 for mask-rcnn
     
