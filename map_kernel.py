@@ -146,39 +146,6 @@ def compute_ap2(detections, dataset=dataset_val, config=inference_config,
     return stat_df
 
 
-def thrensemble(scores_arr, dets_arr, threshes):
-    final = []
-    for i in range(len(scores_arr[0])):
-        for j, (score, thresh) in enumerate(zip(scores_arr[i], threshes)):
-            if score > thresh:
-                final.append(dets_arr[i][j])
-                break
-        else:
-            final.append(np.nan)
-    return final
-
-
-def read_sub(path):
-    return pd.read_csv(path).set_index(PATIENT_ID)[P]
-
-
-def save_sub(ser, path):
-    df = ser.rename_axis(PATIENT_ID).to_frame(P)
-    df.to_csv(path,index=True)
-    return path
-
-
-def get_top_proba(yday):
-    return yday.fillna('.00 ').str.strip().str.partition(' ')[0].astype(float)
-
-
-def lmap(fn, coll): return list(map(fn, coll))
-PATIENT_ID = 'patientId'
-P = 'PredictionString'
-def run_thrensemble(sub_df, threshes=[.15, .15]):
-    scores_arr = sub_df.apply(get_top_proba).values
-    dets_arr = sub_df.values
-    return thrensemble(scores_arr, dets_arr, threshes)
 
 
     scores_arr = np.array(lmap(get_top_proba, sub_df)
