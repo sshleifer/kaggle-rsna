@@ -49,5 +49,22 @@ scp -r *.ipynb paperspace@184.105.174.55:./
 
 
 
+
 """
 
+
+class SaveBestModel(LossRecorder):
+    def __init__(self, model, lr, name='best_model'):
+        super().__init__(model.get_layer_opt(lr, None))
+        self.name = name
+        self.model = model
+        self.best_loss = None
+
+    def on_epoch_end(self, metrics):
+        super().on_epoch_end(metrics)
+        loss, lam, dice, iou_ = metrics
+        if self.best_loss == None or loss < self.best_loss:  # best model
+            self.best_loss = loss
+            save_path = f'{self.name}_{loss:.3f}'
+            print('Saving to {}'.format(save_path))
+            self.model.save(save_path)

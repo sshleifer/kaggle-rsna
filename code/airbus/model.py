@@ -3,7 +3,7 @@ import pandas as pd
 from fastai.dataset import *
 from scipy import ndimage
 
-from code.airbus.constants import SEGMENTATION
+from .constants import SEGMENTATION
 
 
 class UnetBlock(nn.Module):
