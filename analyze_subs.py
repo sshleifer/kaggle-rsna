@@ -27,8 +27,10 @@ def thresh_to_nth_largest_proba(ser, n):
     return ret_ser
 
 
-def read_sub(path):
-    return pd.read_csv(path).set_index(PATIENT_ID)[P]
+def get_top_proba(yday):
+    return yday.fillna('.00 ').str.strip().str.partition(' ')[0].astype(float)
+
+
 
 
 def save_sub(ser, path):
@@ -37,15 +39,13 @@ def save_sub(ser, path):
     return path
 
 
-def get_top_proba(yday):
-    return yday.fillna('.00 ').str.strip().str.partition(' ')[0].astype(float)
+
 
 
 def lmap(fn, coll): return list(map(fn, coll))
 
 
-PATIENT_ID = 'patientId'
-P = 'PredictionString'
+
 
 
 def run_thrensemble(sub_df, threshes=[.15, .15]):
