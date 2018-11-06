@@ -12,3 +12,25 @@ TEST = DATA_DIR / 'test_v2/'
 SEGMENTATION = DATA_DIR / 'train_ship_segmentations_v2.csv'
 PRETRAINED_SEGMENTATION_PATH = PATH / 'lafoss_ckpt'
 DETECTION_TEST_PRED = DATA_DIR / 'ship_detection.csv'
+
+
+
+import pickle
+def pickle_save(obj, path):
+    with open(path, 'wb') as f:
+        pickle.dump(obj, f)
+
+def pickle_load(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+save_pickle = pickle_save
+load_pickle = pickle_load
+def denumerate(lst): return dict(enumerate(lst))
+def lmap(fn, coll): return list(map(fn, coll))
+def dhead(d, n=5): return funcy.project(d, funcy.take(n, d.keys()))
+def run_query(query): return pd.read_sql(query, engine)
+
+tr_n_cut = pickle_load(DATA_DIR / 'train_n_cut95.pkl')
+val_n_cut = pickle_load(DATA_DIR/ 'val_n_cut95.pkl')
+tr_n_cut98 = pickle_load(DATA_DIR / 'train_n_cut98.pkl')
+val_n_cut98 = pickle_load(DATA_DIR/ 'val_n_cut98.pkl')
