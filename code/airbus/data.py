@@ -42,34 +42,4 @@ class pdFilesDataset(FilesDataset):
     def get_c(self):
         return 0
 
-def get_data(sz,bs, n_val=None):
-    if n_val is None:
-        val_data = val_n_cut
-    else:
-        val_data = val_n_cut[:n_val]
-    tfms = tfms_from_model(arch, sz, crop_type=CropType.NO, tfm_y=TfmType.CLASS)
-    tr_names = tr_n if (len(tr_n_cut)%bs == 0) else tr_n[:-(len(tr_n_cut)%bs)] #cut incomplete batch
-    ds = ImageData.get_ds(pdFilesDataset, (tr_names,TRAIN),
-                (val_data,TRAIN), tfms, test=(test_names,TEST))
-    md = ImageData(PATH, ds, bs, num_workers=nw, classes=None)
-    return md
 
-
-class SaveBestModel(LossRecorder):
-    def __init__(self, model, lr, name='best_model'):
-        super().__init__(model.get_layer_opt(lr, None))
-        self.name = name
-        self.model = model
-        self.best_loss = None
-        self.best_acc = None
-
-    def on_epoch_end(self, metrics):
-        super().on_epoch_end(metrics)
-        loss, acc = metrics
-        if self.best_acc == None or acc > self.best_acc:
-            self.best_acc = acc
-            self.best_loss = loss
-            self.model.save(f'{self.name}')
-        elif acc == self.best_acc and  loss < self.best_loss:
-            self.best_loss = loss
-            self.model.save(f'{self.name}')
