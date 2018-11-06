@@ -5,6 +5,8 @@ from scipy import ndimage
 
 from .constants import SEGMENTATION
 
+cut,lr_cut = 8,6
+
 
 class UnetBlock(nn.Module):
     def __init__(self, up_in, x_in, n_out):
@@ -256,13 +258,3 @@ def decode_mask(mask, shape=(768, 768)):
     runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
     runs[1::2] -= runs[::2]
     return ' '.join(str(x) for x in runs)
-
-
-def enc_test(yp, y, name):
-    res = []
-    masks = split_mask(yp)
-    if (len(masks) == 0):
-        res.append({'ImageId': name, 'EncodedPixels': np.nan})
-    for mask in masks:
-        res.append({'ImageId': name, 'EncodedPixels': decode_mask(mask)})
-    return res
