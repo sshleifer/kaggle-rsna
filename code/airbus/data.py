@@ -7,8 +7,7 @@ from fastai.dataset import FilesDataset
 from fastai.dataset import *
 
 
-def get_mask(img_id, df):
-    shape = (768,768)
+def get_mask(img_id, df, shape = (768,768)):
     img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
     masks = df.loc[img_id]['EncodedPixels']
     if(type(masks) == float): return img.reshape(shape)

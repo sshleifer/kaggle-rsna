@@ -37,28 +37,24 @@ my_wt = [
 
 
 def enc_test(yp, y, name):
+    """Intentional side effects on ship_list_dict"""
     masks = split_mask(yp)
     if(len(masks) == 0):
-        ship_list_dict.append({'ImageId':name,'EncodedPixels':np.nan})
+        ship_list_dict.append({'ImageId': name, 'EncodedPixels': np.nan})
     for mask in masks:
-        ship_list_dict.append({'ImageId':name,'EncodedPixels':decode_mask(mask)})
+        ship_list_dict.append({'ImageId': name, 'EncodedPixels': decode_mask(mask)})
 """
 scp -r airbus_data paperspace@184.105.174.55:./
 scp -r *.ipynb paperspace@184.105.174.55:./
-
-
-
-
-
 """
 
 
 class SaveBestModel(LossRecorder):
-    def __init__(self, model, lr, name='best_model'):
+    def __init__(self, model, lr, name, best_loss=None):
         super().__init__(model.get_layer_opt(lr, None))
         self.name = name
         self.model = model
-        self.best_loss = None
+        self.best_loss = best_loss
 
     def on_epoch_end(self, metrics):
         super().on_epoch_end(metrics)
@@ -68,3 +64,12 @@ class SaveBestModel(LossRecorder):
             save_path = f'{self.name}_{loss:.3f}'
             print('Saving to {}'.format(save_path))
             self.model.save(save_path)
+
+
+def split_test_detections(ship_detection, det_thresh=0.5):
+    test_names = ship_detection.loc[ship_detection['p_ship'] > det_thresh, ['id']][
+        'id'].values.tolist()
+    test_names_nothing = ship_detection.loc[ship_detection['p_ship'] <= det_thresh, ['id']][
+        'id'].values.tolist()
+    print(f' using {len(test_names)}, ignoring {len(test_names_nothing)}')
+    return test_names, test_names_nothing
