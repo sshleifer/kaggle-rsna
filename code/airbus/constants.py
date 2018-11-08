@@ -25,10 +25,10 @@ def pickle_load(path):
         return pickle.load(f)
 save_pickle = pickle_save
 load_pickle = pickle_load
+import funcy
 def denumerate(lst): return dict(enumerate(lst))
 def lmap(fn, coll): return list(map(fn, coll))
 def dhead(d, n=5): return funcy.project(d, funcy.take(n, d.keys()))
-def run_query(query): return pd.read_sql(query, engine)
 
 tr_n_cut = pickle_load(DATA_DIR / 'train_n_cut95.pkl')
 val_n_cut = pickle_load(DATA_DIR/ 'val_n_cut95.pkl')
@@ -41,3 +41,5 @@ ENC_PIX ='EncodedPixels'
 import pandas as pd
 def read_sub(path):
     return pd.read_csv(path).set_index(IMAGE_ID)[ENC_PIX]
+def read_probas(path):
+    return pd.read_csv(path).set_index('id').p_ship
