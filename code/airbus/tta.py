@@ -28,6 +28,28 @@ def aug_rot_4cw(x,fwd=True,mask=False): #rotate pi/4 clockwise
 def aug_rot_2T(x,fwd=True,mask=False): #transpose and rotate pi/2
     return aug_rot_2(aug_T(x,fwd,mask),fwd,mask)
 
+
+
+class RandomLighting(Transform):
+    def __init__(self, b, c, tfm_y=TfmType.NO):
+        super().__init__(tfm_y)
+        self.b,self.c = b,c
+
+    def set_state(self):
+        self.store.b_rand = rand0(self.b)
+        self.store.c_rand = rand0(self.c)
+
+    def do_transform(self, x, is_y):
+        if is_y and self.tfm_y != TfmType.PIXEL: return x  #add this line to fix the bug
+        b = self.store.b_rand
+        c = self.store.c_rand
+        c = -1/(c-1) if c<0 else c+1
+        x = lighting(x, b, c)
+        return x
+
+
+
+
 trms_side_on = [aug_unit,aug_flipH]
 trms_top_down = [aug_unit,aug_flipV]
 trms_dihedral = [aug_unit,aug_flipH,aug_flipV,aug_T,aug_rot_2,aug_rot_2T,

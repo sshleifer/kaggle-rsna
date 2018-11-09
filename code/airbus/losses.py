@@ -2,6 +2,7 @@ import torch
 from fastai.dataset import *
 
 def dice_loss(input, target):
+    """Related to IOU"""
     input = torch.sigmoid(input)
     smooth = 1.0
 
@@ -39,10 +40,12 @@ class MixedLoss(nn.Module):
     def forward(self, input, target):
         loss = self.alpha*self.focal(input, target) - torch.log(dice_loss(input, target))
         return loss.mean()
-    
+
+
 def dice(pred, targs):
     pred = (pred>0).float()
     return 2.0 * (pred*targs).sum() / ((pred+targs).sum() + 1.0)
+
 
 def IoU(pred, targs):
     pred = (pred>0).float()
