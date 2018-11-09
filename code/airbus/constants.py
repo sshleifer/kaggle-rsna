@@ -43,3 +43,19 @@ def read_sub(path):
     return pd.read_csv(path).set_index(IMAGE_ID)[ENC_PIX]
 def read_probas(path):
     return pd.read_csv(path).set_index('id').p_ship
+
+
+# Box 184
+res500 = {'models/best_from_ft_768_12__0.191.h5': '0.38148',
+ 'models/best_from_ft_768_12__0.164.h5': '0.40102',
+ 'models/best_from_ft_768_12__0.082.h5': '0.41873',
+ 'models/best_from_ft_768_12__0.056.h5': '0.42284',
+ 'models/best_from_ft_768_12__0.112.h5': '0.41816'}
+
+import os
+e1 = 'models/best_model_768_0.070.h5'  # 65 box so crooked.
+e2 = 'models/best_from_ft_768_12__0.191.h5'  # 184 box (so not crooked)
+def stripper(x):
+    return os.path.basename(x)[-8:-3]
+
+

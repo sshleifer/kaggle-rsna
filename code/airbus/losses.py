@@ -48,3 +48,6 @@ def IoU(pred, targs):
     pred = (pred>0).float()
     intersection = (pred*targs).sum()
     return intersection / ((pred+targs).sum() - intersection + 1.0)
+
+
+
