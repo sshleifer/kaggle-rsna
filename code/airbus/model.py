@@ -227,7 +227,7 @@ def model_pred(learner, dl, F_save):  # if use train dl, disable shuffling
             count += 1
 
 
-def pred_aug(x, aug=[aug_unit]):
+def pred_aug(learn, x, aug=[aug_unit]):
     pred = []
     for aug_cur in aug:
         py = to_np(aug_cur(torch.sigmoid(learn.model(V(aug_cur(x)))),
@@ -245,7 +245,7 @@ def model_pred_aug(learner, dl, F_save, aug=[aug_unit]):
     t = tqdm(iter(dl), leave=False, total=num_batchs)
     count = 0
     for x, y in t:
-        pred = pred_aug(x, aug)
+        pred = pred_aug(learner, x, aug)
         batch_size = len(pred)
         for i in range(batch_size):
             F_save(pred[i], to_np(y[i]), name_list[count])

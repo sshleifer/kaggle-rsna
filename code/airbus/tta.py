@@ -28,6 +28,13 @@ def aug_rot_4cw(x,fwd=True,mask=False): #rotate pi/4 clockwise
 def aug_rot_2T(x,fwd=True,mask=False): #transpose and rotate pi/2
     return aug_rot_2(aug_T(x,fwd,mask),fwd,mask)
 
+import torchvision
+
+def color_jitter(x, fwd=True, mask=False):
+    if mask:
+        return x
+    else:
+        return some_transform(x)
 
 
 class RandomLighting(Transform):
@@ -46,6 +53,8 @@ class RandomLighting(Transform):
         c = -1/(c-1) if c<0 else c+1
         x = lighting(x, b, c)
         return x
+
+rl = RandomLighting(0.05, 0.05)
 
 
 

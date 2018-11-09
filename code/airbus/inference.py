@@ -1,12 +1,12 @@
 from .model import *
-from .data import get_data
+#from .data import get_data_tr
 
 def run_eval(learn):
     """9 mins roughly"""
     score = Score_eval()
     sz = 768 # image size
     bs = 12  # batch size
-    md = get_data(sz,bs)
+    md = get_data_tr(sz, bs)
     process_pred = lambda yp, y, name : score.put(split_mask(yp),name)
     model_pred_aug(learn, md.val_dl, process_pred, trms_dihedral)
     return score.evaluate()

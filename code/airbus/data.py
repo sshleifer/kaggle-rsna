@@ -41,4 +41,31 @@ class pdFilesDataset(FilesDataset):
     def get_c(self):
         return 0
 
+test_names = []  # global from NB
+TRAIN_TFMS = [
+    RandomRotate(20, tfm_y=TfmType.CLASS),
+    RandomDihedral(tfm_y=TfmType.CLASS),
+    RandomLighting(0.05, 0.05, tfm_y=TfmType.CLASS)
+]
+def get_data(sz, bs, test_names=test_names, n_val=None, n_train=None, aug_tfms=TRAIN_TFMS):
+    if n_val is None:
+        val_data = val_n_cut
+    else:
+        val_data = val_n_cut[:n_val]
+    if n_train is None:
+        train_data = tr_n_cut
+    else:
+        train_data = tr_n_cut[:n_train]
 
+
+
+    tfms = tfms_from_model(arch, sz, crop_type=CropType.NO, tfm_y=TfmType.CLASS,
+                           aug_tfms=aug_tfms)
+    # cut incomplete batch
+    tr_names = train_data if (len(train_data) % bs == 0) else train_data[:-(len(train_data) % bs)]
+
+    ds = ImageData.get_ds(
+        pdFilesDataset, (tr_names, TRAIN), (val_data, TRAIN), tfms, test=(test_names, TEST)
+    )
+    md = ImageData(PATH, ds, bs, num_workers=nw, classes=None)
+    return md
