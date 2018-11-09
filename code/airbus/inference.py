@@ -1,14 +1,13 @@
 from .model import *
 #from .data import get_data_tr
 
-def run_eval(learn):
+def run_eval(learn, bs = 12, n_val=None, aug_tfms=TE_TFMS):
     """9 mins roughly"""
     score = Score_eval()
-    sz = 768 # image size
-    bs = 12  # batch size
-    md = get_data_tr(sz, bs)
+    md = get_data(768, bs, n_val=n_val, aug_tfms=aug_tfms)
     process_pred = lambda yp, y, name : score.put(split_mask(yp),name)
     model_pred_aug(learn, md.val_dl, process_pred, trms_dihedral)
+    return round(score.evaluate(), 5)
     return score.evaluate()
 
 

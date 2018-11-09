@@ -7,18 +7,19 @@ from fastai.dataset import FilesDataset
 from fastai.dataset import *
 
 
-def get_mask(img_id, df, shape = (768,768)):
-    img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
+def get_mask(img_id, df, shape=(768, 768)):
+    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
     masks = df.loc[img_id]['EncodedPixels']
-    if(type(masks) == float): return img.reshape(shape)
-    if(type(masks) == str): masks = [masks]
+    if (type(masks) == float): return img.reshape(shape)
+    if (type(masks) == str): masks = [masks]
     for mask in masks:
         s = mask.split()
-        for i in range(len(s)//2):
-            start = int(s[2*i]) - 1
-            length = int(s[2*i+1])
-            img[start:start+length] = 1
+        for i in range(len(s) // 2):
+            start = int(s[2 * i]) - 1
+            length = int(s[2 * i + 1])
+            img[start:start + length] = 1
     return img.reshape(shape).T
+
 
 class pdFilesDataset(FilesDataset):
     def __init__(self, fnames, path, transform):
@@ -41,12 +42,15 @@ class pdFilesDataset(FilesDataset):
     def get_c(self):
         return 0
 
+
 test_names = []  # global from NB
 TRAIN_TFMS = [
     RandomRotate(20, tfm_y=TfmType.CLASS),
     RandomDihedral(tfm_y=TfmType.CLASS),
     RandomLighting(0.05, 0.05, tfm_y=TfmType.CLASS)
 ]
+
+
 def get_data(sz, bs, test_names=test_names, n_val=None, n_train=None, aug_tfms=TRAIN_TFMS):
     if n_val is None:
         val_data = val_n_cut
@@ -57,8 +61,21 @@ def get_data(sz, bs, test_names=test_names, n_val=None, n_train=None, aug_tfms=T
     else:
         train_data = tr_n_cut[:n_train]
 
+    tfms = tfms_from_model(arch, sz, crop_type=CropType.NO, tfm_y=TfmType.CLASS,
+                           aug_tfms=aug_tfms)
+    # cut incomplete batch
+    tr_names = train_data if (len(train_data) % bs == 0) else train_data[:-(len(train_data) % bs)]
+
+    ds = ImageData.get_ds(
+        pdFilesDataset, (tr_names, TRAIN), (val_data, TRAIN), tfms, test=(test_names, TEST)
+    )
+    md = ImageData(PATH, ds, bs, num_workers=nw, classes=None)
+    return md
 
 
+def big_boy_get_data(sz, bs, train_data, val_data, test_names=test_names, aug_tfms=TRAIN_TFMS):
+    arch = resnet34
+    nw = 8
     tfms = tfms_from_model(arch, sz, crop_type=CropType.NO, tfm_y=TfmType.CLASS,
                            aug_tfms=aug_tfms)
     # cut incomplete batch
