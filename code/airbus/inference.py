@@ -1,4 +1,5 @@
 from .model import *
+from fastai.conv_learner import LossRecorder
 #from .data import get_data_tr
 
 def run_eval(learn, bs = 12, n_val=None, aug_tfms=TE_TFMS):
@@ -61,6 +62,22 @@ class SaveBestModel(LossRecorder):
         if self.best_loss == None or loss < self.best_loss:  # best model
             self.best_loss = loss
             save_path = f'{self.name}_{loss:.3f}'
+            print('Saving to {}'.format(save_path))
+            self.model.save(save_path)
+
+class SaveBestDice(LossRecorder):
+    def __init__(self, model, lr, name='best_model',best_loss=None):
+        super().__init__(model.get_layer_opt(lr, None))
+        self.name = name
+        self.model = model
+        self.best_loss = best_loss   # 0.850557 dice...
+
+    def on_epoch_end(self, metrics):
+        super().on_epoch_end(metrics)
+        _, lam, dice, iou_ = metrics
+        if self.best_loss == None or dice > self.best_loss:  # best model
+            self.best_loss = dice
+            save_path = f'{self.name}_{dice:.3f}'
             print('Saving to {}'.format(save_path))
             self.model.save(save_path)
 
