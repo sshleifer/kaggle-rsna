@@ -79,6 +79,10 @@ def get_score(pred, true):
     thresholds = [0.5 + 0.05 * i for i in range(n_th)]
     n_masks = len(true)
     n_pred = len(pred)
+    if (n_masks == 0) and (n_pred ==0):
+        return 1.
+    elif (n_masks == 0) and (n_pred > 0):
+        return 0.
     ious = []
     score = 0
     for mask in true:
@@ -104,11 +108,18 @@ def get_score(pred, true):
         score += ((b + 1) * tp) / ((b + 1) * tp + b * fn + fp)
     return score / n_th
 
+from skimage.morphology import disk
+from skimage.morphology import erosion, dilation, opening, closing, white_tophat
+import funcy
 
-def split_mask(mask, threshold = 0.5, threshold_obj = 30):
-    # ignore predictions composed of "threshold_obj" pixels or less
-    labled, n_objs = ndimage.label(mask > threshold)
+def split_mask(mask, threshold = 0.5, threshold_obj = 30,
+               transform_func=funcy.identity, disk_size=3):
+
+    selem = disk(disk_size)
+    transformed_mask = transform_func(mask, selem)
+    labled, n_objs = ndimage.label(transformed_mask > threshold)
     result = []
+    # ignore predictions composed of "threshold_obj" pixels or less
     for i in range(n_objs):
         obj = (labled == i + 1).astype(int)
         if (obj.sum() > threshold_obj): result.append(obj)
@@ -130,10 +141,10 @@ def get_mask_ind(img_id, df, shape=(768, 768)):  # return mask for each ship
         result.append(img.reshape(shape).T)
     return result
 
-from collections import defaultdict
+from .constants import  SEG_V3
 class Score_eval():
-    def __init__(self):
-        self.segmentation_df = pd.read_csv(SEGMENTATION).set_index('ImageId')
+    def __init__(self, seg_path=SEG_V3):
+        self.segmentation_df = pd.read_csv(seg_path).set_index('ImageId')
         self.score, self.count = 0.0, 0
         self.masks = {}
         self.scores = {}
@@ -153,6 +164,8 @@ class Score_eval():
     def score_df(self):
         n_dets = {k: len(v) for k, v in self.masks.items()}
         return pd.DataFrame(dict(n_dets=n_dets, scores=self.scores))
+
+
 
 
 ### Augmentation

@@ -18,7 +18,7 @@ def run_eval2(learn, md):
     score = Score_eval()
     process_pred = lambda yp, y, name : score.put(split_mask(yp),name)
     model_pred_aug(learn, md.val_dl, process_pred, trms_dihedral)
-    return round(score.evaluate(), 5)
+    print(round(score.evaluate(), 5))
     return score
 
 def make_sub(learn, test_names_nothing):
