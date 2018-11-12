@@ -16,6 +16,12 @@ PSHIP = 'p_ship'
 SEG_V3 = '/home/paperspace/airbus_data/train_ship_segmentations_v3.csv'
 
 
+def ranger(x):
+    if x < 2: return str(x)
+    elif x < 5: return '2-5'
+    else: return '5+'
+
+
 import pickle
 def pickle_save(obj, path):
     with open(path, 'wb') as f:

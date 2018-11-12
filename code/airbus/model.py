@@ -113,10 +113,12 @@ from skimage.morphology import erosion, dilation, opening, closing, white_tophat
 import funcy
 
 def split_mask(mask, threshold = 0.5, threshold_obj = 30,
-               transform_func=funcy.identity, disk_size=3):
-
+               transform_func=None, disk_size=3):
     selem = disk(disk_size)
-    transformed_mask = transform_func(mask, selem)
+    if transform_func is not None:
+        transformed_mask = transform_func(mask, selem)
+    else:
+        transformed_mask = mask
     labled, n_objs = ndimage.label(transformed_mask > threshold)
     result = []
     # ignore predictions composed of "threshold_obj" pixels or less
@@ -141,6 +143,13 @@ def get_mask_ind(img_id, df, shape=(768, 768)):  # return mask for each ship
         result.append(img.reshape(shape).T)
     return result
 
+def msk_sum(msk):
+    comb = sum(msk)
+    if isinstance(comb, int):
+        return comb
+    else:
+        return comb.sum()
+
 from .constants import  SEG_V3
 class Score_eval():
     def __init__(self, seg_path=SEG_V3):
@@ -163,7 +172,12 @@ class Score_eval():
     @property
     def score_df(self):
         n_dets = {k: len(v) for k, v in self.masks.items()}
-        return pd.DataFrame(dict(n_dets=n_dets, scores=self.scores))
+        pix_sums = pd.Series({k: msk_sum(v) for k, v in self.masks.items()})
+        df =  pd.DataFrame(dict(n_dets=n_dets, score=self.scores, pixel_sum=pix_sums))
+        true_counts = self.segmentation_df.groupby(level=0).count()
+        df['true_n_dets'] = true_counts
+        return df
+
 
 
 

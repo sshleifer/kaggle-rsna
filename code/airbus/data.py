@@ -27,11 +27,35 @@ class pdFilesDataset(FilesDataset):
         super().__init__(fnames, transform, path)
 
     def get_x(self, i):
-        img = open_image(os.path.join(self.path, self.fnames[i]))
+        """Updated to allow pseudolabeling."""
+        tr_path = os.path.join(self.path, self.fnames[i])
+        te_path = os.path.join('/home/paperspace/airbus_data/test_v2/', self.fnames[i])
+        if os.path.exists(tr_path):
+            img = open_image(tr_path)
+        else:
+            img = open_image(te_path)
         if self.sz == 768:
             return img
         else:
             return cv2.resize(img, (self.sz, self.sz))
+
+    def get_y(self, i):
+        mask = np.zeros((768, 768), dtype=np.uint8) if (self.path == TEST) \
+            else get_mask(self.fnames[i], self.segmentation_df)
+        img = Image.fromarray(mask).resize((self.sz, self.sz)).convert('RGB')
+        return np.array(img).astype(np.float32)
+
+    def get_c(self):
+        return 0
+
+
+class LoadedDetsDataset(FilesDataset):
+    def __init__(self, fnames, path, transform, seg_path=SEGMENTATION):
+        self.segmentation_df = pd.read_csv(seg_path).set_index('ImageId')
+        super().__init__(fnames, transform, path)
+
+    def get_x(self, i):
+        return pickle_load(self.fnames[i])
 
     def get_y(self, i):
         mask = np.zeros((768, 768), dtype=np.uint8) if (self.path == TEST) \
