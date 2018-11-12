@@ -22,8 +22,8 @@ def get_mask(img_id, df, shape=(768, 768)):
 
 
 class pdFilesDataset(FilesDataset):
-    def __init__(self, fnames, path, transform):
-        self.segmentation_df = pd.read_csv(SEGMENTATION).set_index('ImageId')
+    def __init__(self, fnames, path, transform, seg_path=SEGMENTATION):
+        self.segmentation_df = pd.read_csv(seg_path).set_index('ImageId')
         super().__init__(fnames, transform, path)
 
     def get_x(self, i):
@@ -51,7 +51,8 @@ TRAIN_TFMS = [
 ]
 
 
-def get_data(sz, bs, test_names=test_names, n_val=None, n_train=None, aug_tfms=TRAIN_TFMS):
+def get_data(sz, bs, test_names=test_names, n_val=None, n_train=None, aug_tfms=TRAIN_TFMS,
+             seg_path=SEGMENTATION):
     if n_val is None:
         val_data = val_n_cut
     else:
@@ -67,13 +68,15 @@ def get_data(sz, bs, test_names=test_names, n_val=None, n_train=None, aug_tfms=T
     tr_names = train_data if (len(train_data) % bs == 0) else train_data[:-(len(train_data) % bs)]
 
     ds = ImageData.get_ds(
-        pdFilesDataset, (tr_names, TRAIN), (val_data, TRAIN), tfms, test=(test_names, TEST)
+        pdFilesDataset, (tr_names, TRAIN), (val_data, TRAIN), tfms, test=(test_names, TEST),
+        seg_path=seg_path
     )
     md = ImageData(PATH, ds, bs, num_workers=nw, classes=None)
     return md
 
 
-def big_boy_get_data(sz, bs, train_data, val_data, test_names=test_names, aug_tfms=TRAIN_TFMS):
+def big_boy_get_data(sz, bs, train_data, val_data, test_names=test_names, aug_tfms=TRAIN_TFMS,
+                     seg_path=SEGMENTATION):
     arch = resnet34
     nw = 8
     tfms = tfms_from_model(arch, sz, crop_type=CropType.NO, tfm_y=TfmType.CLASS,
@@ -82,7 +85,8 @@ def big_boy_get_data(sz, bs, train_data, val_data, test_names=test_names, aug_tf
     tr_names = train_data if (len(train_data) % bs == 0) else train_data[:-(len(train_data) % bs)]
 
     ds = ImageData.get_ds(
-        pdFilesDataset, (tr_names, TRAIN), (val_data, TRAIN), tfms, test=(test_names, TEST)
+        pdFilesDataset, (tr_names, TRAIN), (val_data, TRAIN), tfms, test=(test_names, TEST),
+        seg_path=seg_path
     )
     md = ImageData(PATH, ds, bs, num_workers=nw, classes=None)
     return md

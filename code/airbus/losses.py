@@ -41,6 +41,11 @@ class MixedLoss(nn.Module):
         loss = self.alpha*self.focal(input, target) - torch.log(dice_loss(input, target))
         return loss.mean()
 
+class NegLogDiceLoss(nn.module):
+    def forward(self, input, target):
+        loss = -torch.log(dice_loss(input, target))
+        return loss.mean()
+
 
 def dice(pred, targs):
     pred = (pred>0).float()

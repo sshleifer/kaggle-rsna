@@ -13,6 +13,7 @@ SEGMENTATION = DATA_DIR / 'train_ship_segmentations_v2.csv'
 PRETRAINED_SEGMENTATION_PATH = PATH / 'lafoss_ckpt'
 DETECTION_TEST_PRED = DATA_DIR / 'ship_detection.csv'
 PSHIP = 'p_ship'
+SEG_V3 = '/home/paperspace/airbus_data/train_ship_segmentations_v3.csv'
 
 
 import pickle

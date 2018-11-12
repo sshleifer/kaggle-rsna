@@ -12,6 +12,15 @@ def run_eval(learn, bs = 12, n_val=None, aug_tfms=TE_TFMS):
     return score.evaluate()
 
 
+
+def run_eval2(learn, md):
+    """9 mins roughly"""
+    score = Score_eval()
+    process_pred = lambda yp, y, name : score.put(split_mask(yp),name)
+    model_pred_aug(learn, md.val_dl, process_pred, trms_dihedral)
+    return round(score.evaluate(), 5)
+    return score
+
 def make_sub(learn, test_names_nothing):
     """12 mins roughly"""
     ship_list_dict = []

@@ -73,7 +73,7 @@ def IoU(pred, targs):
 
 
 def get_score(pred, true):
-    """I think higher is better."""
+    """Higher is better."""
     n_th = 10
     b = 4
     thresholds = [0.5 + 0.05 * i for i in range(n_th)]
@@ -105,9 +105,8 @@ def get_score(pred, true):
     return score / n_th
 
 
-def split_mask(mask):
-    threshold = 0.5
-    threshold_obj = 30  # ignor predictions composed of "threshold_obj" pixels or less
+def split_mask(mask, threshold = 0.5, threshold_obj = 30):
+    # ignore predictions composed of "threshold_obj" pixels or less
     labled, n_objs = ndimage.label(mask > threshold)
     result = []
     for i in range(n_objs):
@@ -131,19 +130,29 @@ def get_mask_ind(img_id, df, shape=(768, 768)):  # return mask for each ship
         result.append(img.reshape(shape).T)
     return result
 
-
+from collections import defaultdict
 class Score_eval():
     def __init__(self):
         self.segmentation_df = pd.read_csv(SEGMENTATION).set_index('ImageId')
         self.score, self.count = 0.0, 0
+        self.masks = {}
+        self.scores = {}
 
     def put(self, pred, name):
         true = get_mask_ind(name, self.segmentation_df)
-        self.score += get_score(pred, true)
+        self.masks[name] = pred
+        cur_score = get_score(pred, true)
+        self.scores[name] = cur_score
+        self.score += cur_score
         self.count += 1
 
     def evaluate(self):
         return self.score / self.count
+
+    @property
+    def score_df(self):
+        n_dets = {k: len(v) for k, v in self.masks.items()}
+        return pd.DataFrame(dict(n_dets=n_dets, scores=self.scores))
 
 
 ### Augmentation
@@ -258,3 +267,32 @@ def decode_mask(mask, shape=(768, 768)):
     runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
     runs[1::2] -= runs[::2]
     return ' '.join(str(x) for x in runs)
+
+from .constants import pickle_load
+
+
+def run_enc_test(paths, **kwargs):
+    ship_list_dict = []
+    for name in test_names_nothing:
+        ship_list_dict.append({'ImageId':name,'EncodedPixels':np.nan})
+    for path in paths:
+        mask = pickle_load(path)
+        name = r[0][:-4]
+        mas
+        enc_test(*r, **kwargs)
+    pred_df = pd.DataFrame(ship_list_dict)
+    return pred_df
+
+def run_enc_test(flat_upr, **kwargs):
+    ship_list_dict = []
+    for name in test_names_nothing:
+        ship_list_dict.append({'ImageId':name,'EncodedPixels':np.nan})
+    for r in flat_upr:
+        enc_test(*r, **kwargs)
+    pred_df = pd.DataFrame(ship_list_dict)
+    return pred_df
+
+
+def analyze_sub(path):
+    sub = read_sub(path)
+    return pd.Series({'n_masks': sub.count(), 'n_image_id_with_mask': sub.dropna()['ImageId'].nunique()})
